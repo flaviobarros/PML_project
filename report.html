@@ -140,7 +140,65 @@ ctrl &lt;- trainControl(method = 'cv', repeats = 1,
 ## Multinomial logistic regression model
 multnomlogistic &lt;- train(classe ~., data = treino, method = 'multinom', trainControl = ctrl)
 predito &lt;- predict(multnomlogistic, teste)</code></pre>
-<p>and got reasonable success of 19 out of 20.</p>
+<p>and got reasonable success of about 63%. BUT, i didn’t consider correlated variables.</p>
+</div>
+<div id="third-model" class="section level1">
+<h1>Third model</h1>
+<p>At this time i removed correlated variables (correlation over 0.85) and didn’t apply PCA. I used randomForest instead of multinomial logistic regression and got Acc = 0.997. With this model i got 20/20.</p>
+<pre class="r"><code>## Applying PCA and removing noisy variables like timestamp
+treino$classe &lt;- as.factor(treino$classe)
+## Saving user name that can be a predictive power
+user_name = treino$user_name
+
+## Removing user name and timestamp variables
+treino &lt;- treino[,-c(1:4)]
+
+## Finding correlations
+correlated = findCorrelation(cor(treino[,-53]), cutoff = 0.85, verbose = T)
+
+## Removing correlated variables
+treino &lt;- treino[,-correlated]
+
+## Add user_name again
+treino$user_name &lt;- user_name
+
+## Saving column names to remove from test set too
+colunas &lt;- colnames(treino)
+teste &lt;- subset(teste, select = colnames(teste) %in% colunas)
+
+## Evaluationg the randomForest with cross validation
+## Fitting a randomForest - correlated variables + PCA (90% components)
+ctrl &lt;- trainControl(method = 'cv', repeats = 1, 
+                     verboseIter = T)
+
+## Multinomial logistic regression model
+rfFit &lt;- train(classe ~., data = treino, method = 'rf', trainControl = ctrl)
+predito &lt;- predict(rfFit, teste)</code></pre>
+<p>This model took more then 10 hours to run! So i will load it here and show the evaluation:</p>
+<pre class="r"><code>load(file = 'rfFit.rda')
+rfFit</code></pre>
+<pre><code>## Random Forest 
+## 
+## 19622 samples
+##    45 predictors
+##     5 classes: 'A', 'B', 'C', 'D', 'E' 
+## 
+## No pre-processing
+## Resampling: Bootstrapped (25 reps) 
+## Summary of sample sizes: 19622, 19622, 19622, 19622, 19622, 19622, ... 
+## Resampling results across tuning parameters:
+## 
+##   mtry  Accuracy   Kappa      Accuracy SD   Kappa SD    
+##    2    0.9932764  0.9914927  0.0011494954  0.0014564954
+##   25    0.9974881  0.9968221  0.0006804215  0.0008611665
+##   49    0.9916648  0.9894556  0.0032100480  0.0040579192
+## 
+## Accuracy was used to select the optimal model using  the largest value.
+## The final value used for the model was mtry = 25.</code></pre>
+</div>
+<div id="conclusion" class="section level1">
+<h1>Conclusion</h1>
+<p>I think this task was all about data preparation. This dataset is noisy and i think that with basic data preparation, plus a good model, like randomForest, it’s possible to build an almost perfect classifier.</p>
 </div>
 
 

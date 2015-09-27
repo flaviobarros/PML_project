@@ -39,12 +39,36 @@ predito <- predict(arvore, teste, 'class')
 ##########################################################################################
 ## Applying PCA and removing noisy variables like timestamp
 treino$classe <- as.factor(treino$classe)
+## Saving user name that can be a predictive power
+user_name = treino$user_name
+
+## Removing user name and timestamp variables
 treino <- treino[,-c(1:4)]
+
+## Finding correlations
+correlated = findCorrelation(cor(treino[,-53]), cutoff = 0.85, verbose = T)
+
+## Removing correlated variables
+treino <- treino[,-correlated]
+
+## Add user_name again
+treino$user_name <- user_name
 
 ## Saving column names to remove from test set too
 colunas <- colnames(treino)
 teste <- subset(teste, select = colnames(teste) %in% colunas)
 
+################################ Tree Model ######################################
+## Evaluationg the tree with cross validation
+## Fitting a multinomial logistic regression model with 90% PCA components
+ctrl <- trainControl(method = 'cv', repeats = 1, 
+                     verboseIter = T)
+
+## Multinomial logistic regression model
+rfFit <- train(classe ~., data = treino, method = 'rf', trainControl = ctrl)
+predito <- predict(rfFit, teste)
+
+################################ PCA #############################################
 ## PCA with princomp
 pc <- princomp(treino[,-53], cor = T)
 treino_pc <- pc$scores[1:47]
